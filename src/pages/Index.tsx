@@ -103,14 +103,13 @@ const Index = () => {
   const getLineClassName = (index: number, type: string) => {
     const baseClasses = "py-2 px-4 rounded-lg transition-all duration-300 ";
 
-    // Проверяем активность только для lyrics
+    // Определяем активность строки
     let isActive = false;
     if (type === "lyric") {
       const currentLyricText = lyricLines[currentLyricIndex]?.text;
       const currentLineText = songLines[index]?.text;
       isActive = currentLyricText === currentLineText;
     }
-    const isActive = index === currentLine;
 
     switch (type) {
       case "title":

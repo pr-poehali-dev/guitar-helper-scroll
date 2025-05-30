@@ -5,6 +5,8 @@ import Icon from "@/components/ui/icon";
 const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentLine, setCurrentLine] = useState(0);
+  const [currentLyricIndex, setCurrentLyricIndex] = useState(0);
+  const [bpm, setBpm] = useState(120);
   const [scrollSpeed, setScrollSpeed] = useState(2);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -34,18 +36,24 @@ const Index = () => {
     { type: "lyric", text: "Пожелай мне удачи" },
   ];
 
+  // Только строки с текстом для выделения
+  const lyricLines = songLines.filter((line) => line.type === "lyric");
+
   useEffect(() => {
     if (isPlaying) {
+      // Конвертируем BPM в миллисекунды (60000ms / BPM)
+      const intervalTime = 60000 / bpm;
+
       intervalRef.current = setInterval(() => {
-        setCurrentLine((prev) => {
-          if (prev < songLines.length - 1) {
+        setCurrentLyricIndex((prev) => {
+          if (prev < lyricLines.length - 1) {
             return prev + 1;
           } else {
             setIsPlaying(false);
             return 0;
           }
         });
-      }, 3000 / scrollSpeed);
+      }, intervalTime);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -57,22 +65,31 @@ const Index = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isPlaying, scrollSpeed, songLines.length]);
+  }, [isPlaying, bpm, lyricLines.length]);
 
-  // Автоскролл к активной строке
+  // Автоскролл к активной строке (только lyrics)
   useEffect(() => {
-    if (scrollContainerRef.current) {
-      const activeElement = scrollContainerRef.current.children[
-        currentLine
-      ] as HTMLElement;
-      if (activeElement) {
-        activeElement.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
+    if (scrollContainerRef.current && currentLyricIndex < lyricLines.length) {
+      const currentLyricText = lyricLines[currentLyricIndex].text;
+
+      // Найдем индекс этой строки в общем массиве
+      const globalIndex = songLines.findIndex(
+        (line) => line.type === "lyric" && line.text === currentLyricText,
+      );
+
+      if (globalIndex !== -1) {
+        const activeElement = scrollContainerRef.current.children[
+          globalIndex
+        ] as HTMLElement;
+        if (activeElement) {
+          activeElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
       }
     }
-  }, [currentLine]);
+  }, [currentLyricIndex, lyricLines, songLines]);
 
   const togglePlayPause = () => {
     setIsPlaying(!isPlaying);
@@ -80,11 +97,19 @@ const Index = () => {
 
   const resetSong = () => {
     setIsPlaying(false);
-    setCurrentLine(0);
+    setCurrentLyricIndex(0);
   };
 
   const getLineClassName = (index: number, type: string) => {
     const baseClasses = "py-2 px-4 rounded-lg transition-all duration-300 ";
+
+    // Проверяем активность только для lyrics
+    let isActive = false;
+    if (type === "lyric") {
+      const currentLyricText = lyricLines[currentLyricIndex]?.text;
+      const currentLineText = songLines[index]?.text;
+      isActive = currentLyricText === currentLineText;
+    }
     const isActive = index === currentLine;
 
     switch (type) {
